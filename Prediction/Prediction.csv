@@ -1,0 +1,48 @@
+,Drug name,Cell line name
+0,Erlotinib,UACC-257
+1,Erlotinib,ETK-1
+2,Erlotinib,LS-411N
+3,Imatinib,UACC-257
+4,Imatinib,ETK-1
+5,Imatinib,LS-411N
+6,A-770041,UACC-257
+7,A-770041,ETK-1
+8,A-770041,LS-411N
+9,Entinostat,UACC-257
+10,Entinostat,ETK-1
+11,Entinostat,LS-411N
+12,Doxorubicin,UACC-257
+13,Doxorubicin,CAL-120
+14,Doxorubicin,ETK-1
+15,Doxorubicin,LS-411N
+16,Doxorubicin,NCI-H441
+17,Doxorubicin,NCI-H2452
+18,Doxorubicin,NCI-H358
+19,Shikonin,UACC-257
+20,Shikonin,CAL-120
+21,Shikonin,ETK-1
+22,Shikonin,LS-411N
+23,Shikonin,NCI-H441
+24,Shikonin,NCI-H2452
+25,Shikonin,NCI-H358
+26,Obatoclax Mesylate,UACC-257
+27,Obatoclax Mesylate,CAL-120
+28,Obatoclax Mesylate,ETK-1
+29,Obatoclax Mesylate,LS-411N
+30,Obatoclax Mesylate,NCI-H441
+31,Obatoclax Mesylate,NCI-H2452
+32,Obatoclax Mesylate,NCI-H358
+33,Pazopanib,UACC-257
+34,Pazopanib,CAL-120
+35,Pazopanib,ETK-1
+36,Pazopanib,LS-411N
+37,Pazopanib,NCI-H441
+38,Pazopanib,NCI-H2452
+39,Pazopanib,NCI-H358
+40,AT-7519,UACC-257
+41,AT-7519,CAL-120
+42,AT-7519,ETK-1
+43,AT-7519,LS-411N
+44,AT-7519,NCI-H441
+45,AT-7519,NCI-H2452
+46,AT-7519,NCI-H358

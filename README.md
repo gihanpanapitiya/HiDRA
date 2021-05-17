@@ -10,7 +10,7 @@ The training and validation list file is csv file with three columns: Drug name,
 
 The input directory is the directory of that input files are stored.
 The input files consist of:
-0.csv~186.csv: The normalized expression value of member genes in pathway 0~186.
+0.csv - 186.csv: The normalized expression value of member genes in pathway 0 - 186.
 Each file consists of Cell line name and member genes. First column is Cell line name and Normalized gene expression values are following. The first column name should be ‘Cell line name’ and exact gene symbol from the second column.
 drug.csv: The Morgan fingerprint for each drugs. First column is Drug name and 512-bits Morgan fingerprint in binary form is following. The first column name should be ‘Drug name’ and 0~511 from second column.
 

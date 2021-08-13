@@ -172,7 +172,7 @@ def Making_Model():
     GeneSet_Concat=concatenate(GeneSet_Model,axis=1, name='GeneSet_Concatenate')
     Drug_effected_Concat=concatenate(Drug_effected_Model_for_Attention,axis=1, name='Drug_effected_Concatenate')
     #Pathway-level attention
-    Sample_Attention=Dense(len(GeneSet_Dic_withoutNA.keys()),activation='tanh', name='Sample_Attention_Dense')(GeneSet_Concat)
+    Sample_Attention=Dense(len(GeneSet_Dic_withoutNA.keys()),activation='tanh', name='Sample_Attention_Dense')(Drug_effected_Concat)
     Sample_Attention=Activation(activation='softmax', name='Sample_Attention_Softmax')(Sample_Attention)
     Sample_Multiplied=multiply([GeneSet_Concat,Sample_Attention], name='Sample_Attention_Multiplied')
     Sample_Multiplied=BatchNormalization(name='Sample_Attention_BatchNormalized')(Sample_Multiplied)

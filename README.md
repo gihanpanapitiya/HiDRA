@@ -2,9 +2,9 @@ Readme for Hierarchical Network for Drug Response Prediction with Attention's su
 
 1.Training
 Training python file works by typing following command:
-python HiDRA_training.py –t training_list –v validation_list –i input_dir –e epoch –o output_model
+python HiDRA_training.py –t training_list –v validation_list –i input_dir/ –e epoch –o output_model
 If you want to run the HiDRA with the toy example, 
-python HiDRA_training.py –t Training.csv –v Validation.csv –i input_dir –e epoch –o output_model.hdf5
+python HiDRA_training.py –t Training.csv –v Validation.csv –i input_dir/ –e epoch –o output_model.hdf5
 
 The training and validation list file is csv file with three columns: Drug name, Cell line name, IC50. The column name should be [‘Drug name’,’Cell line name’,’IC50’].
 

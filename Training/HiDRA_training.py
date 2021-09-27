@@ -92,7 +92,7 @@ def read_files(GDSC_df,Input_directory):
 #Make new HiDRA model
 def Making_Model():
     #Read Gene expression and Gene set for model making
-    #They are same with the source codes in the function 'Read_feils'
+    #They are same with the source codes in the function 'Read_files'
     #Read Gene expression file
     GeneExpression_with_Symbol=pd.read_csv("expression.csv")
     GeneExpression_with_Symbol.index=GeneExpression_with_Symbol.Gene_Symbol

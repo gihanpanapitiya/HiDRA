@@ -6,18 +6,19 @@ def main():
     import argparse
     from scipy.stats import zscore
     import candle
-    os.environ['CANDLE_DATA_DIR'] = 'raw_data/'
+#    os.environ['CANDLE_DATA_DIR'] = 'raw_data/'
+    data_dir = os.environ['CANDLE_DATA_DIR'].rstrip('/')
 
     dir_url = 'ftp://ftp.mcs.anl.gov/pub/candle/public/improve/reproducability/July2020/data.gdsc1/'
     candle.file_utils.get_file('ge_gdsc1.csv', dir_url + 'ge_gdsc1.csv')
     candle.file_utils.get_file('ecfp2_gdsc1.csv', dir_url + 'ecfp2_gdsc1.csv')
     candle.file_utils.get_file('rsp_gdsc1.csv', dir_url + 'rsp_gdsc1.csv')
 
-    if not os.path.isdir('preprocessed_data/'):
-        os.mkdir('preprocessed_data/')
+#    if not os.path.isdir('preprocessed_data/'):
+#        os.mkdir('preprocessed_data/')
 
     # Loading cell line expression data
-    expression_df = pd.read_csv('raw_data/common/ge_gdsc1.csv', index_col=0)
+    expression_df = pd.read_csv(data_dir + '/common/ge_gdsc1.csv', index_col=0)
 
     expression_df = expression_df.transpose()
     expression_df.index = [x.strip('ge_') for x in expression_df.index]
@@ -50,19 +51,19 @@ def main():
     expression_df = expression_df.drop(drop_rows)
 
     # Save trimmed and normalized expression file and pathway/gene dictionary
-    expression_df.to_csv('preprocessed_data/ge_gdsc1.csv')
-    json.dump(GeneSet_Dic, open('preprocessed_data/geneset.json', 'w'))
+    expression_df.to_csv(data_dir + '/ge_gdsc1.csv')
+    json.dump(GeneSet_Dic, open(data_dir + '/geneset.json', 'w'))
 
     # Load drug fingerprints file
-    drug_fng = pd.read_csv('raw_data/common/ecfp2_gdsc1.csv', index_col=0)
-    drug_fng.to_csv('preprocessed_data/ecfp2_gdsc1.csv')
+    drug_fng = pd.read_csv(data_dir + '/common/ecfp2_gdsc1.csv', index_col=0)
+    drug_fng.to_csv(data_dir + '/ecfp2_gdsc1.csv')
 
     # Read IC50 table and remove drugs/cell lines not present in metadata
-    ic50_tbl = pd.read_csv('raw_data/common/rsp_gdsc1.csv')
+    ic50_tbl = pd.read_csv(data_dir + '/common/rsp_gdsc1.csv')
     drop_columns = ['SOURCE', 'IC50', 'EC50', 'EC50se', 'R2fit', 'Einf', 'HS',
                     'AAC1', 'AUC1', 'DSS1', 'AUC_bin']
     ic50_tbl = ic50_tbl.drop(columns=drop_columns)
-    ic50_tbl.to_csv('preprocessed_data/rsp_gdsc1.csv')
+    ic50_tbl.to_csv(data_dir + '/rsp_gdsc1.csv')
 
 
 if __name__=="__main__":

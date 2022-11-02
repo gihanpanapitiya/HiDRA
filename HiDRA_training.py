@@ -23,11 +23,13 @@ from tensorflow.keras.models import Model, Sequential, load_model
 from tensorflow.keras.layers import Input, Dense, Dropout, BatchNormalization
 from tensorflow.keras.layers import concatenate, multiply, dot, Activation
 from tensorflow.keras.optimizers import Adam
+from tensorflow.keras.callbacks import ModelCheckpoint
 from sklearn.model_selection import KFold
 
 file_path = os.path.dirname(os.path.realpath(__file__))
 import candle
-os.environ['CANDLE_DATA_DIR'] = 'preprocessed_data/'
+#os.environ['CANDLE_DATA_DIR'] = 'preprocessed_data/'
+data_dir = os.environ['CANDLE_DATA_DIR'].rstrip('/')
 
 additional_definitions = []
 
@@ -194,10 +196,10 @@ def run(gParameters):
 #    candle.file_utils.get_file('preprocessed_data/rsp_gdsc1.csv', dir_url + 'rsp_gdsc1.csv')
 #    candle.file_utils.get_file('preprocessed_data/geneset.json', dir_url + 'rsp_gdsc1.csv')
 
-    expr = pd.read_csv('preprocessed_data/ge_gdsc1.csv', index_col=0)
-    GeneSet_Dic = json.load(open('preprocessed_data/geneset.json', 'r'))
-    ic50 = pd.read_csv('preprocessed_data/rsp_gdsc1.csv', index_col=0)
-    drugs = pd.read_csv('preprocessed_data/ecfp2_gdsc1.csv', index_col=0)
+    expr = pd.read_csv(data_dir + '/ge_gdsc1.csv', index_col=0)
+    GeneSet_Dic = json.load(open(data_dir + '/geneset.json', 'r'))
+    ic50 = pd.read_csv(data_dir + '/rsp_gdsc1.csv', index_col=0)
+    drugs = pd.read_csv(data_dir + '/ecfp2_gdsc1.csv', index_col=0)
 
     # Training
     train_index = np.asarray([x for x in range(ic50.shape[0])])
@@ -210,13 +212,17 @@ def run(gParameters):
     train_input = parse_data(ic50_tr, expr, GeneSet_Dic, drugs)
     val_input = parse_data(ic50_val, expr, GeneSet_Dic, drugs)
 
-    train_input = parse_data(ic50_tr, expr, GeneSet_Dic, drugs)
+    model_saver = ModelCheckpoint(output_dir + '/model.h5', monitor='val_loss',
+                                  save_best_only=True, save_weights_only=False)
+
+    callbacks = [model_saver]
 
     model = Making_Model(GeneSet_Dic)
     model.compile(loss=loss, optimizer=optimizer)
     history = model.fit(train_input, train_label, shuffle=True,
                      epochs=epochs, batch_size=batch_size, verbose=2,
-                     validation_data=(val_input,val_label))
+                     validation_data=(val_input,val_label))#,
+#                     callbacks=callbacks)
 
     result = model.predict(val_input)
     result = [y[0] for y in result]

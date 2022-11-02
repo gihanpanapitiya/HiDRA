@@ -12,29 +12,60 @@ Requirement:
 import numpy as np
 import pandas as pd
 import os
+import sys
 import argparse
 import json
 
 # Import keras modules
 import tensorflow as tf
+from tensorflow.keras import backend as K
 from tensorflow.keras.models import Model, Sequential, load_model
 from tensorflow.keras.layers import Input, Dense, Dropout, BatchNormalization
 from tensorflow.keras.layers import concatenate, multiply, dot, Activation
 from tensorflow.keras.optimizers import Adam
 from sklearn.model_selection import KFold
 
-# Import rdkit
-import rdkit
-import rdkit.Chem as Chem
-from rdkit.Chem import AllChem
-from rdkit.Chem.Fingerprints import FingerprintMols
+file_path = os.path.dirname(os.path.realpath(__file__))
+import candle
+os.environ['CANDLE_DATA_DIR'] = 'preprocessed_data/'
 
-# Set number of GPUs to use
-gpus = tf.config.list_physical_devices('GPU')
-tf.config.set_visible_devices(gpus[6:], 'GPU')
+additional_definitions = []
 
-# Fix the random seed
-np.random.seed(5)
+required = [
+    'epochs',
+    'batch_size',
+    'optimizer',
+    'loss',
+    'output_dir'
+]
+
+
+class HIDRA(candle.Benchmark):
+    def set_locals(self):
+        if required is not None:
+            self.required = set(required)
+        if additional_definitions is not None:
+            self.additional_definitions = additional_definitions
+
+
+if K.backend() == 'tensorflow' and 'NUM_INTRA_THREADS' in os.environ:
+    sess = tf.Session(config=tf.ConfigProto(inter_op_parallelism_threads=int(os.environ['NUM_INTER_THREADS']),
+                                            intra_op_parallelism_threads=int(os.environ['NUM_INTRA_THREADS'])))
+    K.set_session(sess)
+
+
+def initialize_parameters():
+    hidra_common = HIDRA(file_path,
+        'hidra_params.txt',
+        'keras',
+        prog='HiDRA_candle',
+        desc='HiDRA run'
+    )
+
+    # Initialize parameters
+    gParameters = candle.finalize_parameters(hidra_common)
+
+    return gParameters
 
 
 def parse_data(ic50, expr, GeneSet_Dic, drugs):
@@ -139,97 +170,72 @@ def Making_Model(GeneSet_Dic):
 
 
 def root_mean_squared_error(y_true, y_pred):
-    from tensorflow.keras import backend as K
     return K.sqrt(K.mean(K.square(y_pred - y_true)))
 
 
+def run(gParameters):
+    batch_size = gParameters['batch_size']
+    epochs = gParameters['epochs']
+    optimizer = gParameters['optimizer']
+    loss = gParameters['loss']
+    output_dir = gParameters['output_dir']
+
+    # Set number of GPUs to use
+#    gpus = tf.config.list_physical_devices('GPU')
+#    tf.config.set_visible_devices(gpus[6:], 'GPU')
+
+    # Fix the random seed
+#    np.random.seed(5)
+
+    # These files do not yet exist on the ftp - run HiDRA_FeatureGeneration_benchmark.py to create them
+#    dir_url = 'ftp://ftp.mcs.anl.gov/pub/candle/public/improve/hidra/preprocessed_data/'
+#    candle.file_utils.get_file('preprocessed_data/ge_gdsc1.csv', dir_url + 'ge_gdsc1.csv')
+#    candle.file_utils.get_file('preprocessed_data/ecfp2_gdsc1.csv', dir_url + 'ecfp2_gdsc1.csv')
+#    candle.file_utils.get_file('preprocessed_data/rsp_gdsc1.csv', dir_url + 'rsp_gdsc1.csv')
+#    candle.file_utils.get_file('preprocessed_data/geneset.json', dir_url + 'rsp_gdsc1.csv')
+
+    expr = pd.read_csv('preprocessed_data/ge_gdsc1.csv', index_col=0)
+    GeneSet_Dic = json.load(open('preprocessed_data/geneset.json', 'r'))
+    ic50 = pd.read_csv('preprocessed_data/rsp_gdsc1.csv', index_col=0)
+    drugs = pd.read_csv('preprocessed_data/ecfp2_gdsc1.csv', index_col=0)
+
+    # Training
+    train_index = np.asarray([x for x in range(ic50.shape[0])])
+    val_index = np.random.choice(train_index, int(ic50.shape[0]*0.1), replace=False)
+    train_index = train_index[~np.isin(train_index, val_index)]
+    ic50_tr = ic50.iloc[train_index]
+    ic50_val = ic50.iloc[val_index]
+    train_label = ic50_tr['AUC']
+    val_label = ic50_val['AUC']
+    train_input = parse_data(ic50_tr, expr, GeneSet_Dic, drugs)
+    val_input = parse_data(ic50_val, expr, GeneSet_Dic, drugs)
+
+    train_input = parse_data(ic50_tr, expr, GeneSet_Dic, drugs)
+
+    model = Making_Model(GeneSet_Dic)
+    model.compile(loss=loss, optimizer=optimizer)
+    history = model.fit(train_input, train_label, shuffle=True,
+                     epochs=epochs, batch_size=batch_size, verbose=2,
+                     validation_data=(val_input,val_label))
+
+    result = model.predict(val_input)
+    result = [y[0] for y in result]
+    ic50_val['result'] = result
+    ic50_val.to_csv(output_dir + '/val_results.csv')
+    model.save(output_dir + '/model.hdf5')
+
+    return history
+
+
 def main():
-    # Reading argument
-    parser = argparse.ArgumentParser(description='HiDRA:Hierarchical Network for Drug Response Prediction with Attention-Training')
-
-    # Options
-#    parser.add_argument('d', type=str, help='Directory of input data')
-#    parser.add_argument('f', type=int, help='The number of folds')
-    parser.add_argument('e', type=int, help='The epoch in the training process')
-    parser.add_argument('o', type=str, help='The output path that model file be stored')
-    args = parser.parse_args()
-
-    data_sets = set(['ccle', 'ctrp', 'gcsi', 'gdsc1', 'gdsc2'])
-
-    for ds in data_sets:
-        # Read Training and Validation files
-        #dir = args.d.rstrip('/')
-        dir = ds + '_processed'
-        expr = pd.read_csv(dir + '/expression.csv', index_col=0)
-        GeneSet_Dic = json.load(open(dir + '/geneset.json', 'r'))
-        ic50 = pd.read_csv(dir + '/auc.csv', index_col=0)
-        drugs = pd.read_csv(dir + '/drug_fp.csv', index_col=0)
-
-        # Training
-        for i in range(10):
-            out_name = args.o + '_' + ds + '_' + ds + '_fold' + str(i) + '.csv'
-            print(out_name)
-
-            if os.path.exists(out_name):
-                continue
-
-            train_index = np.genfromtxt('../data/july2020_' + ds + '/split_' + str(i) + '_tr_id')
-            test_index = np.genfromtxt('../data/july2020_' + ds + '/split_' + str(i) + '_te_id')
-            val_n = int(train_index.shape[0]*0.1)
-            val_index = np.random.choice(train_index, val_n, replace=False)
-            train_index = train_index[~np.isin(train_index, val_index)]
-
-            print(ds)
-            print(ic50)
-            ic50_tr = ic50.iloc[train_index]
-            ic50_val = ic50.iloc[val_index]
-            ic50_test = ic50.iloc[test_index]
-            train_label = ic50_tr['AUC']
-            val_label = ic50_val['AUC']
-            test_label = ic50_test['AUC']
-            train_input = parse_data(ic50_tr, expr, GeneSet_Dic, drugs)
-            val_input = parse_data(ic50_val, expr, GeneSet_Dic, drugs)
-            test_input = parse_data(ic50_test, expr, GeneSet_Dic, drugs)
-
-            model = Making_Model(GeneSet_Dic)
-            model.compile(loss='mean_squared_error',optimizer='adam')
-            #model.compile(loss=root_mean_squared_error,optimizer='adam')
-            #print(model.summary())
-            hist = model.fit(train_input, train_label, shuffle=True,
-                         epochs=args.e, batch_size=32, verbose=2,
-                         validation_data=(val_input,val_label))
-
-            result = model.predict(test_input)
-            result = [y[0] for y in result]
-            dataset = [ds]*len(result)
-            print(len(result))
-            print(len(dataset))
-            ic50_test['result'] = result
-            ic50_test['dataset'] = dataset
-            ic50_test.to_csv(args.o + '_' + ds + '_' + ds + '_fold' + str(i) + '.csv')
-            model.save(args.o + '_' + ds + '_fold' + str(i) + '.hdf5') #Save the model to the output directory
-
-            remaining_datasets = data_sets.copy()
-            remaining_datasets.remove(ds)
-
-            for rd in remaining_datasets:
-                rd_dir = rd + '_processed'
-                rd_expr = pd.read_csv(rd_dir + '/expression.csv', index_col=0)
-                rd_ic50 = pd.read_csv(rd_dir + '/auc.csv', index_col=0)
-                rd_drugs = pd.read_csv(rd_dir + '/drug_fp.csv', index_col=0)
-                test_label = rd_ic50['AUC']
-                test_input = parse_data(rd_ic50, rd_expr, GeneSet_Dic, rd_drugs)
-                result = model.predict(test_input)
-                result = [y[0] for y in result]
-                dataset = [rd]*len(result)
-                rd_ic50['Pred'] = result
-                rd_ic50.rename(columns={"AUC": "True"})
-#                rd_ic50['dataset'] = dataset
-                rd_ic50.to_csv(args.o + '_' + ds + '_' + rd + '_split_' + str(i) + '.csv')
+    gParameters = initialize_parameters()
+    run(gParameters)
 
 
-if __name__=="__main__":
+if __name__ == '__main__':
     main()
+    try:
+        K.clear_session()
 
-
-
+    except AttributeError:
+        pass

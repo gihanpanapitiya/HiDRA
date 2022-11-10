@@ -8,6 +8,8 @@ export CUDA_VISIBLE_DEVICES=$1
 export CANDLE_DATA_DIR=$2
 export CANDLE_CONFIG=$3
 
+MODEL_DIR="/usr/local/HiDRA"
+
 # Check if path to model directory is set otherwise assume this scriot is in top level of model dir
 if [ -z $MODEL_DIR ]
 then

@@ -236,7 +236,10 @@ def run(gParameters):
 
 def main():
     gParameters = initialize_parameters()
-    run(gParameters)
+    history = run(gParameters)
+    min_loss = np.min(history.history['val_loss'])
+    print('Minimum validation loss: ' + str(min_loss))
+    print('Minimum loss epoch: ' + str(np.argmin(history.history['val_loss'])+1))
 
 
 if __name__ == '__main__':

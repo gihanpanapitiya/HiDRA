@@ -35,7 +35,8 @@ fi
 
 # Change into directory and execute tests
 cd ${MODEL_DIR}
-python HiDRA_predict.py
+python HiDRA_FeatureGeneration.py
+python HiDRA_training.py
 
 # Check if successful 
 exit 0

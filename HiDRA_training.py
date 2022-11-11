@@ -24,7 +24,7 @@ from tensorflow.keras.layers import Input, Dense, Dropout, BatchNormalization
 from tensorflow.keras.layers import concatenate, multiply, dot, Activation
 from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.callbacks import ModelCheckpoint
-from sklearn.model_selection import KFold
+from sklearn.model_selection import KFold, train_test_split
 
 file_path = os.path.dirname(os.path.realpath(__file__))
 import candle

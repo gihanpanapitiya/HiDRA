@@ -1,83 +1,131 @@
 """
 Predict with the HiDRA model
 
-Requirement:
-    model.hdf: Pre-trained model file
-    predict.csv: The list of cancer-drug pairs that will be predicted. Consists of idx (int), Drug name, Cnacer cell line name.
-    input_dir: The directory that includes input files
+Requirements:
+    model.hdf5: Pre-trained model file
 """
-#Import basic packages
+# Import basic packages
 import numpy as np
 import pandas as pd
-import csv
-
 import os
+import sys
 import argparse
+import json
 
-#Import keras modules
+# Import keras modules
 import tensorflow as tf
-from tensorflow.keras.layers import Layer
-import keras.initializers
-from tensorflow.keras.models import Model, Sequential,load_model
-from tensorflow.keras.layers import Input, Dense, Dropout, BatchNormalization, Activation, Multiply, multiply,dot
-from tensorflow.keras.layers import Concatenate,concatenate
+from tensorflow.keras import backend as K
+from tensorflow.keras.models import Model, Sequential, load_model
+from tensorflow.keras.layers import Input, Dense, Dropout, BatchNormalization
+from tensorflow.keras.layers import concatenate, multiply, dot, Activation
 from tensorflow.keras.optimizers import Adam
-from tensorflow.keras.utils import plot_model
+from tensorflow.keras.callbacks import ModelCheckpoint
+from sklearn.model_selection import KFold, train_test_split
 
-#Fix the random seed
-#np.random.seed(5)
+file_path = os.path.dirname(os.path.realpath(__file__))
+import candle
+data_dir = os.environ['CANDLE_DATA_DIR'].rstrip('/')
+config_file = os.environ['CANDLE_CONFIG'].rstrip('/')
 
-#Using 20% of GPU memory only
-def get_session(gpu_fraction=0.1):
+additional_definitions = []
 
-    num_threads = os.environ.get('OMP_NUM_THREADS')
-    gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=gpu_fraction)
+required = [
+    'epochs',
+    'batch_size',
+    'optimizer',
+    'loss',
+    'output_dir'
+]
 
-    if num_threads:
-        return tf.Session(config=tf.ConfigProto(gpu_options=gpu_options, intra_op_parallelism_threads=num_threads))
-    else:
-        return tf.Session(config=tf.ConfigProto(gpu_options=gpu_options))
+
+class HIDRA(candle.Benchmark):
+    def set_locals(self):
+        if required is not None:
+            self.required = set(required)
+        if additional_definitions is not None:
+            self.additional_definitions = additional_definitions
 
 
-def read_files(Predict_list,Input_directory):
-    #Read predict list
-    GDSC_without_duplicated=pd.read_csv(Predict_list,index_col=0)
-    GDSC_without_duplicated.columns=['Drug name','Cell line name']
+if K.backend() == 'tensorflow' and 'NUM_INTRA_THREADS' in os.environ:
+    sess = tf.Session(config=tf.ConfigProto(inter_op_parallelism_threads=int(os.environ['NUM_INTER_THREADS']),
+                                            intra_op_parallelism_threads=int(os.environ['NUM_INTRA_THREADS'])))
+    K.set_session(sess)
 
-    #Read input files for HiDRA model
-    X_origin=[pd.read_csv(Input_directory+str(x)+'.csv',index_col=0) for x in range(186)]
-    X_origin=[df.loc[GDSC_without_duplicated['Cell line name']] for df in X_origin]
-    Drug=pd.read_csv(Input_directory+'drug.csv',index_col=0)
-    X_origin.append(Drug.loc[GDSC_without_duplicated['Drug name']])
 
-    return X_origin
+def initialize_parameters():
+    hidra_common = HIDRA(file_path,
+        config_file,
+        'keras',
+        prog='HiDRA_candle',
+        desc='HiDRA run'
+    )
+
+    # Initialize parameters
+    gParameters = candle.finalize_parameters(hidra_common)
+
+    return gParameters
+
+
+def parse_data(ic50, expr, GeneSet_Dic, drugs):
+    # Divide expression data based on pathway
+    X = []
+    expr = expr.transpose()
+
+    for pathway in GeneSet_Dic.keys():
+        df = expr[GeneSet_Dic[pathway]]
+        X.append(df.loc[ic50['CancID']])
+
+    X.append(drugs.loc[ic50['DrugID']])
+
+    return X
+
+
+def run(gParameters):
+    batch_size = gParameters['batch_size']
+    epochs = gParameters['epochs']
+    optimizer = gParameters['optimizer']
+    loss = gParameters['loss']
+    output_dir = gParameters['output_dir']
+
+    # These files do not yet exist on the ftp - run HiDRA_FeatureGeneration_benchmark.py to create them
+#    dir_url = 'ftp://ftp.mcs.anl.gov/pub/candle/public/improve/hidra/preprocessed_data/'
+#    candle.file_utils.get_file('preprocessed_data/ge_gdsc1.csv', dir_url + 'ge_gdsc1.csv')
+#    candle.file_utils.get_file('preprocessed_data/ecfp2_gdsc1.csv', dir_url + 'ecfp2_gdsc1.csv')
+#    candle.file_utils.get_file('preprocessed_data/rsp_gdsc1.csv', dir_url + 'rsp_gdsc1.csv')
+#    candle.file_utils.get_file('preprocessed_data/geneset.json', dir_url + 'rsp_gdsc1.csv')
+
+    expr = pd.read_csv(data_dir + '/ge_gdsc1.csv', index_col=0)
+    GeneSet_Dic = json.load(open(data_dir + '/geneset.json', 'r'))
+    ic50 = pd.read_csv(data_dir + '/rsp_gdsc1.csv', index_col=0)
+    drugs = pd.read_csv(data_dir + '/ecfp2_gdsc1.csv', index_col=0)
+
+    # Training
+    train_index = np.asarray([x for x in range(ic50.shape[0])])
+    train_index, test_index = train_test_split(train_index, test_size=0.1,
+                                               random_state=4785)
+    train_index, val_index = train_test_split(train_index, test_size=0.1,
+                                              random_state=4785)
+    ic50_test = ic50.iloc[test_index]
+    test_label = ic50_test['AUC']
+    test_input = parse_data(ic50_test, expr, GeneSet_Dic, drugs)
+
+    model = load_model(output_dir + '/model.hdf5')
+
+    result = model.predict(test_input)
+    result = [y[0] for y in result]
+    ic50_test['result'] = result
+    ic50_test.to_csv(output_dir + '/test_results.csv')
 
 
 def main():
-    KTF.set_session(get_session())
+    gParameters = initialize_parameters()
+    run(gParameters)
 
-    #Reading argument 
-    parser=argparse.ArgumentParser(description='HiDRA:Hierarchical Network for Drug Response Prediction with Attention-Predict')
-    
-    #Options
-    parser.add_argument('-m',type=str,help='The model file')
-    parser.add_argument('-p',type=str,help='The prediction list')
-    parser.add_argument('-i',type=str,help='The input directory')
-    parser.add_argument('-o',type=str,help='The output file path that prediction result be stored')
-    
-    args=parser.parse_args()
-   
-    #Read input files from predict list 
-    model_input=read_files(args.p,args.i)
-    #Load model in hdf5 file format
-    model=load_model(args.m,compile=False)
-    #Predict
-    result=model.predict(model_input)
-    result=[y[0] for y in result]
-    predict_list=pd.read_csv(args.p)
-    predict_list['result']=result
-    #Save the predict results to the output directory
-    predict_list.to_csv(args.o)
-    
-if __name__=="__main__":
+
+if __name__ == '__main__':
     main()
+    try:
+        K.clear_session()
+
+    except AttributeError:
+        pass

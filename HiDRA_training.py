@@ -1,11 +1,7 @@
 """
-Training new HiDRA model
-Requirement:
-    expression.csv: Expression of all genes for all cell lines
-    geneset.gmt: Gene set description file. Consists of Gene set name, Source, Gene set member 1, Gene set member 2, ...
-    Training.csv: Training pair list. Consists of idx, Drug name, Cell line name, IC50 value for that pair.
-    Validation.csv: Validation pair list. Consists of idx, Drug name, Cell line name, IC50 value for that pair.
-    input_dir: The directory that includes input files.
+Training the HiDRA model
+Requirements:
+    Run the shell script train.sh to preprocess data and set the CANDLE data dir and config files.
 """
 
 # Import basic packages
@@ -238,8 +234,8 @@ def main():
     gParameters = initialize_parameters()
     history = run(gParameters)
     min_loss = np.min(history.history['val_loss'])
-    print('Minimum validation loss: ' + str(min_loss))
     print('Minimum loss epoch: ' + str(np.argmin(history.history['val_loss'])+1))
+    print('IMPROVE_RESULT val_loss:\t' + str(min_loss))
 
 
 if __name__ == '__main__':

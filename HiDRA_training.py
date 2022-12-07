@@ -227,15 +227,24 @@ def run(gParameters):
     ic50_val.to_csv(output_dir + '/val_results.csv')
     model.save(output_dir + '/model.hdf5')
 
+    pcc = result.corr(method='Pearson').loc['AUC', 'result']
+    scc = result.corr(method='Spearman').loc['AUC', 'result']
+    rmse = ((result['AUC'] - result['result']) ** 2).mean() ** .5
+    val_loss = history.history['val_loss'][-1]
+
+    val_scores = {'val_loss':val_loss, 'pcc':pcc, 'scc':scc, 'rmse':rmse}
+
+    with open(output_dir + "/scores.json", "w", encoding="utf-8") as f:
+        json.dump(val_scores, f, ensure_ascii=False, indent=4)
+
+    print('IMPROVE_RESULT val_loss:\t' + str(val_loss))
+
     return history
 
 
 def main():
     gParameters = initialize_parameters()
     history = run(gParameters)
-    min_loss = np.min(history.history['val_loss'])
-    print('Minimum loss epoch: ' + str(np.argmin(history.history['val_loss'])+1))
-    print('IMPROVE_RESULT val_loss:\t' + str(min_loss))
 
 
 if __name__ == '__main__':

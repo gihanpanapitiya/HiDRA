@@ -26,7 +26,7 @@ file_path = os.path.dirname(os.path.realpath(__file__))
 import candle
 #os.environ['CANDLE_DATA_DIR'] = 'preprocessed_data/'
 data_dir = os.environ['CANDLE_DATA_DIR'].rstrip('/')
-config_file = os.environ['CANDLE_CONFIG'].rstrip('/')
+#config_file = os.environ['CANDLE_CONFIG'].rstrip('/')
 
 additional_definitions = []
 
@@ -55,7 +55,7 @@ if K.backend() == 'tensorflow' and 'NUM_INTRA_THREADS' in os.environ:
 
 def initialize_parameters():
     hidra_common = HIDRA(file_path,
-        config_file,
+        'hidra_default_model.txt',
         'keras',
         prog='HiDRA_candle',
         desc='HiDRA run'

@@ -227,9 +227,9 @@ def run(gParameters):
     ic50_val.to_csv(output_dir + '/val_results.csv')
     model.save(output_dir + '/model.hdf5')
 
-    pcc = result.corr(method='Pearson').loc['AUC', 'result']
-    scc = result.corr(method='Spearman').loc['AUC', 'result']
-    rmse = ((result['AUC'] - result['result']) ** 2).mean() ** .5
+    pcc = ic50_val.corr(method='pearson').loc['AUC', 'result']
+    scc = ic50_val.corr(method='spearman').loc['AUC', 'result']
+    rmse = ((ic50_val['AUC'] - ic50_val['result']) ** 2).mean() ** .5
     val_loss = history.history['val_loss'][-1]
 
     val_scores = {'val_loss':val_loss, 'pcc':pcc, 'scc':scc, 'rmse':rmse}

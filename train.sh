@@ -30,7 +30,7 @@ elif [ $# -ge 3 ] ; then
         CANDLE_DATA_DIR=$1 ; shift
 
         # if original $3 is a file, set candle_config and passthrough $@
-        if [ -f $1 ] ; then
+        if [ -f $CANDLE_DATA_DIR/$1 ] ; then
 		echo "$1 is a file"
                 CANDLE_CONFIG=$1 ; shift
                 CMD="python ${CANDLE_MODEL} --config_file $CANDLE_CONFIG $@"

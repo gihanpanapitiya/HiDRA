@@ -3,5 +3,4 @@ epochs=2
 batch_size=1024
 optimizer='adam'
 loss='mean_squared_error'
-output_dir='../hidra_data/hidra_candle_test'
 model_name='hidra'

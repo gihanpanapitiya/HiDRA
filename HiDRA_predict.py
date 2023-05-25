@@ -54,7 +54,7 @@ if K.backend() == 'tensorflow' and 'NUM_INTRA_THREADS' in os.environ:
 
 def initialize_parameters():
     hidra_common = HIDRA(file_path,
-        config_file,
+        'hidra_default_model.txt',
         'keras',
         prog='HiDRA_candle',
         desc='HiDRA run'
@@ -87,6 +87,9 @@ def run(gParameters):
     loss = gParameters['loss']
     output_dir = gParameters['output_dir']
 
+    y_col_name = "ic50"
+    source_data_name = "gdsc1"
+
     # These files do not yet exist on the ftp - run HiDRA_FeatureGeneration_benchmark.py to create them
 #    dir_url = 'ftp://ftp.mcs.anl.gov/pub/candle/public/improve/hidra/preprocessed_data/'
 #    candle.file_utils.get_file('preprocessed_data/ge_gdsc1.csv', dir_url + 'ge_gdsc1.csv')
@@ -94,10 +97,10 @@ def run(gParameters):
 #    candle.file_utils.get_file('preprocessed_data/rsp_gdsc1.csv', dir_url + 'rsp_gdsc1.csv')
 #    candle.file_utils.get_file('preprocessed_data/geneset.json', dir_url + 'rsp_gdsc1.csv')
 
-    expr = pd.read_csv(data_dir + '/ge_gdsc1.csv', index_col=0)
+    expr = pd.read_csv(data_dir + '/ge_' + source_data_name + '.csv', index_col=0)
     GeneSet_Dic = json.load(open(data_dir + '/geneset.json', 'r'))
-    ic50 = pd.read_csv(data_dir + '/rsp_gdsc1.csv', index_col=0)
-    drugs = pd.read_csv(data_dir + '/ecfp2_gdsc1.csv', index_col=0)
+    ic50 = pd.read_csv(data_dir + '/rsp_' + source_data_name + '.csv', index_col=0)
+    drugs = pd.read_csv(data_dir + '/ecfp2_' + source_data_name + '.csv', index_col=0)
 
     # Training
     train_index = np.asarray([x for x in range(ic50.shape[0])])
@@ -106,7 +109,7 @@ def run(gParameters):
     train_index, val_index = train_test_split(train_index, test_size=0.1,
                                               random_state=4785)
     ic50_test = ic50.iloc[test_index]
-    test_label = ic50_test['AUC']
+    test_label = ic50_test[y_col_name]
     test_input = parse_data(ic50_test, expr, GeneSet_Dic, drugs)
 
     model = load_model(output_dir + '/model.hdf5')

@@ -179,6 +179,9 @@ def run(gParameters):
     loss = gParameters['loss']
     output_dir = gParameters['output_dir']
 
+    y_col_name = "IC50"
+    source_data_name = "GDSC1000"
+
     # Set number of GPUs to use
 #    gpus = tf.config.list_physical_devices('GPU')
 #    tf.config.set_visible_devices(gpus[6:], 'GPU')
@@ -193,23 +196,26 @@ def run(gParameters):
 #    candle.file_utils.get_file('preprocessed_data/rsp_gdsc1.csv', dir_url + 'rsp_gdsc1.csv')
 #    candle.file_utils.get_file('preprocessed_data/geneset.json', dir_url + 'rsp_gdsc1.csv')
 
-    expr = pd.read_csv(data_dir + '/ge_gdsc1.csv', index_col=0)
+    expr = pd.read_csv(data_dir + '/ge_' + source_data_name + '.csv', index_col=0)
     GeneSet_Dic = json.load(open(data_dir + '/geneset.json', 'r'))
-    ic50 = pd.read_csv(data_dir + '/rsp_gdsc1.csv', index_col=0)
-    drugs = pd.read_csv(data_dir + '/ecfp2_gdsc1.csv', index_col=0)
+    ic50 = pd.read_csv(data_dir + '/rsp_' + source_data_name + '.csv', index_col=0)
+    drugs = pd.read_csv(data_dir + '/ecfp2_' + source_data_name + '.csv', index_col=0)
 
     # Training
     train_index = np.asarray([x for x in range(ic50.shape[0])])
-    val_index = np.random.choice(train_index, int(ic50.shape[0]*0.1), replace=False)
-    train_index = train_index[~np.isin(train_index, val_index)]
+    train_index, test_index = train_test_split(train_index, test_size=0.1,
+                                               random_state=4785)
+    train_index, val_index = train_test_split(train_index, test_size=0.1,
+                                              random_state=4785)
+
     ic50_tr = ic50.iloc[train_index]
     ic50_val = ic50.iloc[val_index]
-    train_label = ic50_tr['AUC']
-    val_label = ic50_val['AUC']
+    train_label = ic50_tr[y_col_name]
+    val_label = ic50_val[y_col_name]
     train_input = parse_data(ic50_tr, expr, GeneSet_Dic, drugs)
     val_input = parse_data(ic50_val, expr, GeneSet_Dic, drugs)
 
-    model_saver = ModelCheckpoint(output_dir + '/model.h5', monitor='val_loss',
+    model_saver = ModelCheckpoint(output_dir + '/model.hdf5', monitor='val_loss',
                                   save_best_only=True, save_weights_only=False)
 
     callbacks = [model_saver]
@@ -218,19 +224,21 @@ def run(gParameters):
     model.compile(loss=loss, optimizer=optimizer)
     history = model.fit(train_input, train_label, shuffle=True,
                      epochs=epochs, batch_size=batch_size, verbose=2,
-                     validation_data=(val_input,val_label))#,
-#                     callbacks=callbacks)
+                     validation_data=(val_input,val_label),
+                     callbacks=callbacks)
+
+    model = load_model(output_dir + '/model.hdf5')
 
     result = model.predict(val_input)
     result = [y[0] for y in result]
     ic50_val['result'] = result
     ic50_val.to_csv(output_dir + '/val_results.csv')
-    model.save(output_dir + '/model.hdf5')
+#    model.save(output_dir + '/model.hdf5')
 
-    pcc = ic50_val.corr(method='pearson').loc['AUC', 'result']
-    scc = ic50_val.corr(method='spearman').loc['AUC', 'result']
-    rmse = ((ic50_val['AUC'] - ic50_val['result']) ** 2).mean() ** .5
-    val_loss = history.history['val_loss'][-1]
+    pcc = ic50_val.corr(method='pearson').loc[y_col_name, 'result']
+    scc = ic50_val.corr(method='spearman').loc[y_col_name, 'result']
+    rmse = ((ic50_val[y_col_name] - ic50_val['result']) ** 2).mean() ** .5
+    val_loss = np.min(history.history['val_loss'])
 
     val_scores = {'val_loss':val_loss, 'pcc':pcc, 'scc':scc, 'rmse':rmse}
 

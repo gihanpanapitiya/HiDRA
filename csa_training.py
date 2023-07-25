@@ -26,6 +26,8 @@ file_path = os.path.dirname(os.path.realpath(__file__))
 import candle
 
 data_dir = os.environ['CANDLE_DATA_DIR'].rstrip('/')
+train_source = os.environ['TRAIN_SOURCE'].rstrip('/')
+split = os.environ['SPLIT'].rstrip('/')
 
 additional_definitions = []
 
@@ -178,18 +180,14 @@ def run(gParameters):
     loss = gParameters['loss']
     output_dir = gParameters['output_dir']
 
-#    y_col_name = "auc1"
-#    source_data_name = "CCLE"
     y_col_name =  "auc"
-    source_data_name = "CTRPv2"
-    split = 0
 
-    expr = pd.read_csv(data_dir + '/ge_' + source_data_name + '.csv', index_col=0)
+    expr = pd.read_csv(data_dir + '/ge_' + train_source + '.csv', index_col=0)
     GeneSet_Dic = json.load(open(data_dir + '/geneset.json', 'r'))
-    drugs = pd.read_csv(data_dir + '/ecfp2_' + source_data_name + '.csv', index_col=0)
+    drugs = pd.read_csv(data_dir + '/ecfp2_' + train_source + '.csv', index_col=0)
 
     # Training
-    file_start = data_dir + '/rsp_' + source_data_name + '_split' + str(split)
+    file_start = data_dir + '/rsp_' + train_source + '_split' + str(split)
     auc_tr = pd.read_csv(file_start + '_train.csv', index_col=0)
     auc_val = pd.read_csv(file_start + '_val.csv', index_col=0)
     train_label = auc_tr[y_col_name]

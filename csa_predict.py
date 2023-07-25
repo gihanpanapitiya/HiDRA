@@ -25,7 +25,9 @@ from sklearn.model_selection import KFold, train_test_split
 file_path = os.path.dirname(os.path.realpath(__file__))
 import candle
 data_dir = os.environ['CANDLE_DATA_DIR'].rstrip('/')
-#config_file = os.environ['CANDLE_CONFIG'].rstrip('/')
+test_source = os.environ['TEST_SOURCE'].rstrip('/')
+train_source = os.environ['TRAIN_SOURCE'].rstrip('/')
+split = os.environ['SPLIT'].rstrip('/')
 
 additional_definitions = []
 

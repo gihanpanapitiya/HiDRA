@@ -11,38 +11,38 @@ def main():
     import improve_utils
 
     data_dir = os.environ['CANDLE_DATA_DIR'].rstrip('/')
+    split = os.environ['SPLIT'].rstrip('/')
+    train_source = os.environ['TRAIN_SOURCE'].rstrip('/')
 
     # y_col_name = "auc1"
     # source_data_name = "CCLE"
     y_col_name = "auc"
-    source_data_name = "GDSCv2"
-    split = 'all'
 
     if isinstance(split, int):
         split += 1
         rs_tr = improve_utils.load_single_drug_response_data_v2(
         source=source_data_name,
-        split_file_name=f"{source_data_name}_split_{split}_train.txt",
+        split_file_name=f"{train_source}_split_{split}_train.txt",
         y_col_name=y_col_name)
 
         rs_vl = improve_utils.load_single_drug_response_data_v2(
         source=source_data_name,
-        split_file_name=f"{source_data_name}_split_{split}_val.txt",
+        split_file_name=f"{train_source}_split_{split}_val.txt",
         y_col_name=y_col_name)
 
         rs_te = improve_utils.load_single_drug_response_data_v2(
         source=source_data_name,
-        split_file_name=f"{source_data_name}_split_{split}_test.txt",
+        split_file_name=f"{train_source}_split_{split}_test.txt",
         y_col_name=y_col_name)
 
-        rs_tr.to_csv(data_dir + '/rsp_' + source_data_name + '_split' + str(split) + '_train.csv')
-        rs_vl.to_csv(data_dir + '/rsp_' + source_data_name + '_split' + str(split) + '_val.csv')
-        rs_te.to_csv(data_dir + '/rsp_' + source_data_name + '_split' + str(split) + '_test.csv')
+        rs_tr.to_csv(data_dir + '/rsp_' + train_source + '_split' + str(split) + '_train.csv')
+        rs_vl.to_csv(data_dir + '/rsp_' + train_source + '_split' + str(split) + '_val.csv')
+        rs_te.to_csv(data_dir + '/rsp_' + train_source + '_split' + str(split) + '_test.csv')
 
     else:
         rs_te = improve_utils.load_single_drug_response_data_v2(
         source=source_data_name,
-        split_file_name=f"{source_data_name}_all.txt",
+        split_file_name=f"{train_source}_all.txt",
         y_col_name=y_col_name)
 
         rs_te.to_csv(data_dir + '/rsp_' + source_data_name + '_all.csv')

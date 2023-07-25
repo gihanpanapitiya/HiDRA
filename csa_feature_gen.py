@@ -14,26 +14,39 @@ def main():
 
     # y_col_name = "auc1"
     # source_data_name = "CCLE"
-    y_col_name = "ic50"
-    source_data_name = "GDSCv1"
-    split = 0
+    y_col_name = "auc"
+    source_data_name = "GDSCv2"
+    split = 'all'
 
-    rs_tr = improve_utils.load_single_drug_response_data_v2(
-    source=source_data_name,
-    split_file_name=f"{source_data_name}_split_{split}_train.txt",
-    y_col_name=y_col_name)
+    if isinstance(split, int):
+        split += 1
+        rs_tr = improve_utils.load_single_drug_response_data_v2(
+        source=source_data_name,
+        split_file_name=f"{source_data_name}_split_{split}_train.txt",
+        y_col_name=y_col_name)
 
-    print(rs_tr)
+        rs_vl = improve_utils.load_single_drug_response_data_v2(
+        source=source_data_name,
+        split_file_name=f"{source_data_name}_split_{split}_val.txt",
+        y_col_name=y_col_name)
 
-    rs_vl = improve_utils.load_single_drug_response_data_v2(
-    source=source_data_name,
-    split_file_name=f"{source_data_name}_split_{split}_val.txt",
-    y_col_name=y_col_name)
+        rs_te = improve_utils.load_single_drug_response_data_v2(
+        source=source_data_name,
+        split_file_name=f"{source_data_name}_split_{split}_test.txt",
+        y_col_name=y_col_name)
 
-    rs_te = improve_utils.load_single_drug_response_data_v2(
-    source=source_data_name,
-    split_file_name=f"{source_data_name}_split_{split}_test.txt",
-    y_col_name=y_col_name)
+        rs_tr.to_csv(data_dir + '/rsp_' + source_data_name + '_split' + str(split) + '_train.csv')
+        rs_vl.to_csv(data_dir + '/rsp_' + source_data_name + '_split' + str(split) + '_val.csv')
+        rs_te.to_csv(data_dir + '/rsp_' + source_data_name + '_split' + str(split) + '_test.csv')
+
+    else:
+        rs_te = improve_utils.load_single_drug_response_data_v2(
+        source=source_data_name,
+        split_file_name=f"{source_data_name}_all.txt",
+        y_col_name=y_col_name)
+
+        rs_te.to_csv(data_dir + '/rsp_' + source_data_name + '_all.csv')
+
 
     # Loading cell line expression data
     expression_df = improve_utils.load_gene_expression_data(gene_system_identifier="Gene_Symbol")
@@ -74,11 +87,6 @@ def main():
     # Load drug fingerprints file
     drug_fng = improve_utils.load_morgan_fingerprint_data()
     drug_fng.to_csv(data_dir + '/ecfp2_' + source_data_name + '.csv')
-
-    # Read IC50 table
-    rs_tr.to_csv(data_dir + '/rsp_' + source_data_name + '_split' + str(split) + '_train.csv')
-    rs_vl.to_csv(data_dir + '/rsp_' + source_data_name + '_split' + str(split) + '_val.csv')
-    rs_te.to_csv(data_dir + '/rsp_' + source_data_name + '_split' + str(split) + '_test.csv')
 
 
 if __name__=="__main__":

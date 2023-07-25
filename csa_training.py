@@ -180,8 +180,8 @@ def run(gParameters):
 
 #    y_col_name = "auc1"
 #    source_data_name = "CCLE"
-    y_col_name =  "ic50"
-    source_data_name = "GDSCv1"
+    y_col_name =  "auc"
+    source_data_name = "CTRPv2"
     split = 0
 
     expr = pd.read_csv(data_dir + '/ge_' + source_data_name + '.csv', index_col=0)
@@ -194,8 +194,6 @@ def run(gParameters):
     auc_val = pd.read_csv(file_start + '_val.csv', index_col=0)
     train_label = auc_tr[y_col_name]
     val_label = auc_val[y_col_name]
-    print(auc_tr)
-    exit()
     train_input = parse_data(auc_tr, expr, GeneSet_Dic, drugs)
     val_input = parse_data(auc_val, expr, GeneSet_Dic, drugs)
 
@@ -220,7 +218,7 @@ def run(gParameters):
     pcc = auc_val.corr(method='pearson').loc[y_col_name, 'result']
     scc = auc_val.corr(method='spearman').loc[y_col_name, 'result']
     rmse = ((auc_val[y_col_name] - auc_val['result']) ** 2).mean() ** .5
-    val_loss = history.history['val_loss'][-1]
+    val_loss = np.min(history.history['val_loss'])
 
     val_scores = {'val_loss':val_loss, 'pcc':pcc, 'scc':scc, 'rmse':rmse}
 

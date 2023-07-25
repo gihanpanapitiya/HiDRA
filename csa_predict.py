@@ -89,17 +89,22 @@ def run(gParameters):
 
     # y_col_name = "auc1"
     # source_data_name = "CCLE"
-    y_col_name =  "ic50"
-    source_data_name = "GDSCv1"
-    split = 0
+    y_col_name =  "auc"
+    source_data_name = "GDSCv2"
+    split = 'all'
 
+    if isinstance(split, int):
+        split_name = source_data_name + '_split' + str(split) + '_test.csv'
+
+    else:
+        split_name = source_data_name + '_all'
+
+    auc_test = pd.read_csv(data_dir + '/rsp_' + split_name + '.csv', index_col=0)
     expr = pd.read_csv(data_dir + '/ge_' + source_data_name + '.csv', index_col=0)
     GeneSet_Dic = json.load(open(data_dir + '/geneset.json', 'r'))
     drugs = pd.read_csv(data_dir + '/ecfp2_' + source_data_name + '.csv', index_col=0)
 
     # Training
-    file_start = data_dir + '/rsp_' + source_data_name + '_split' + str(split)
-    auc_test = pd.read_csv(file_start + '_test.csv', index_col=0)
     test_label = auc_test[y_col_name]
     test_input = parse_data(auc_test, expr, GeneSet_Dic, drugs)
 
@@ -108,7 +113,7 @@ def run(gParameters):
     result = model.predict(test_input)
     result = [y[0] for y in result]
     auc_test['result'] = result
-    auc_test.to_csv(output_dir + '/test_results.csv')
+    auc_test.to_csv(output_dir + '/' + split_name + '_results.csv')
 
 
 def main():

@@ -13,9 +13,9 @@
 # arg 6 CANDLE_CONFIG
 
 ### Path to your CANDLEized model's main Python script###
-CANDLE_MODEL=csa_training.py
-DATA_PREPROCESSOR=csa_feature_gen.py
-CANDLE_TEST=csa_predict.py
+CANDLE_MODEL=/usr/local/HiDRA/csa_training.py
+DATA_PREPROCESSOR=/usr/local/HiDRA/csa_feature_gen.py
+CANDLE_TEST=/usr/local/HiDRA/csa_predict.py
 
 if [ $# -lt 5 ] ; then
         echo "Illegal number of parameters"

@@ -21,13 +21,15 @@ from tensorflow.keras.layers import concatenate, multiply, dot, Activation
 from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.callbacks import ModelCheckpoint
 from sklearn.model_selection import KFold, train_test_split
+from data_utils import Downloader, DataProcessor, add_smiles
+
 
 file_path = os.path.dirname(os.path.realpath(__file__))
 import candle
 
-data_dir = os.environ['CANDLE_DATA_DIR'].rstrip('/')
-train_source = os.environ['TRAIN_SOURCE'].rstrip('/')
-split = os.environ['SPLIT'].rstrip('/')
+# data_dir = os.environ['CANDLE_DATA_DIR'].rstrip('/')
+# train_source = os.environ['TRAIN_SOURCE'].rstrip('/')
+# split = os.environ['SPLIT'].rstrip('/')
 
 additional_definitions = []
 
@@ -172,28 +174,90 @@ def Making_Model(GeneSet_Dic):
 def root_mean_squared_error(y_true, y_pred):
     return K.sqrt(K.mean(K.square(y_pred - y_true)))
 
+def split_df(df, seed):
+    
+    train, test = train_test_split(df, random_state=seed, test_size=0.2)
+    val, test = train_test_split(test, random_state=seed, test_size=0.5)
+
+    train.reset_index(drop=True, inplace=True)
+    val.reset_index(drop=True, inplace=True)
+    test.reset_index(drop=True, inplace=True)
+    
+    return train, val, test
+
+def get_drug_response_data(args):
+
+    data_path= args.data_path
+    metric=args.metric
+    data_type=args.data_type
+    split_id = args.data_split_id
+    source_data_name= data_type
+
+    proc = DataProcessor(args.data_version)
+
+    train_tmp = proc.load_drug_response_data(data_path=data_path, 
+                                        data_type=data_type, split_id=split_id, split_type='train', response_type=metric)
+
+    val_tmp = proc.load_drug_response_data(data_path=data_path, 
+                                        data_type=data_type, split_id=split_id, split_type='val', response_type=metric)
+
+    test_tmp = proc.load_drug_response_data(data_path=data_path, 
+                                        data_type=data_type, split_id=split_id, split_type='test', response_type=metric)
+
+
+    smiles_df = proc.load_smiles_data(data_dir=data_path)
+
+    train_tmp = add_smiles(smiles_df, train_tmp, metric)
+    val_tmp = add_smiles(smiles_df, val_tmp, metric)
+    test_tmp = add_smiles(smiles_df, test_tmp, metric)
+
+    df_all = pd.concat([train_tmp, val_tmp, test_tmp], axis=0)
+    df_all.reset_index(drop=True, inplace=True)
+    train, val, test = split_df(df_all, args.data_split_seed)
+
+    return train, val, test
 
 def run(gParameters):
-    batch_size = gParameters['batch_size']
-    epochs = gParameters['epochs']
-    optimizer = gParameters['optimizer']
-    loss = gParameters['loss']
-    output_dir = gParameters['output_dir']
+    # batch_size = gParameters['batch_size']
+    # epochs = gParameters['epochs']
+    # optimizer = gParameters['optimizer']
+    # loss = gParameters['loss']
+    # output_dir = gParameters['output_dir']
 
-    y_col_name =  "auc"
+    batch_size = gParameters.batch_size
+    epochs = gParameters.epochs
+    optimizer = gParameters.optimizer
+    loss = gParameters.loss
+    output_dir = gParameters.output_dir
+
+    output_dir = os.path.join(output_dir, str(args.run_id) )
+    os.makedirs(output_dir)
+
+
+    y_col_name =  gParameters.metric
+    data_dir = gParameters.data_path
+    train_source = gParameters.data_type
 
     expr = pd.read_csv(data_dir + '/ge_' + train_source + '.csv', index_col=0)
     GeneSet_Dic = json.load(open(data_dir + '/geneset.json', 'r'))
     drugs = pd.read_csv(data_dir + '/ecfp2_' + train_source + '.csv', index_col=0)
 
+
+
+
+
     # Training
-    file_start = data_dir + '/rsp_' + train_source + '_split' + str(split)
-    auc_tr = pd.read_csv(file_start + '_train.csv', index_col=0)
-    auc_val = pd.read_csv(file_start + '_val.csv', index_col=0)
+    # file_start = data_dir + '/rsp_' + train_source + '_split' + str(split)
+    # auc_tr = pd.read_csv(file_start + '_train.csv', index_col=0)
+    # auc_val = pd.read_csv(file_start + '_val.csv', index_col=0)
+
+    auc_tr, auc_val, auc_test = get_drug_response_data(args)
+
     train_label = auc_tr[y_col_name]
     val_label = auc_val[y_col_name]
     train_input = parse_data(auc_tr, expr, GeneSet_Dic, drugs)
     val_input = parse_data(auc_val, expr, GeneSet_Dic, drugs)
+    test_input = parse_data(auc_test, expr, GeneSet_Dic, drugs)
 
     model_saver = ModelCheckpoint(output_dir + '/model.h5', monitor='val_loss',
                                   save_best_only=True, save_weights_only=False)
@@ -211,6 +275,8 @@ def run(gParameters):
     result = [y[0] for y in result]
     auc_val['result'] = result
     auc_val.to_csv(output_dir + '/val_results.csv')
+
+
     model.save(output_dir + '/model.hdf5')
 
     pcc = auc_val.corr(method='pearson').loc[y_col_name, 'result']
@@ -225,16 +291,47 @@ def run(gParameters):
 
     print('IMPROVE_RESULT val_loss:\t' + str(val_loss))
 
+
+    result = model.predict(test_input)
+    result = [y[0] for y in result]
+    auc_test['pred'] = result
+    auc_test['true'] = auc_test['ic50']
+    auc_test.to_csv(output_dir + '/test_predictions.csv', index=False)
+
     return history
 
 
-def main():
-    gParameters = initialize_parameters()
-    history = run(gParameters)
+def main(args):
+    # gParameters = initialize_parameters()
+    # history = run(gParameters)
+    history = run(args)
 
 
 if __name__ == '__main__':
-    main()
+
+
+    parser = argparse.ArgumentParser(prog='ProgramName', description='What the program does')
+    parser.add_argument('--metric',  default='ic50', help='')
+    parser.add_argument('--run_id',  default=0, help='')
+    # parser.add_argument('--epochs',  default=1, help='')
+    parser.add_argument('--data_split_seed',  default=1, help='')
+    parser.add_argument('--output_dir',  default='./Output', help='')
+    parser.add_argument('--data_path',  default='./Data', help='')
+    parser.add_argument('--data_version',  default='benchmark-data-imp-2023', help='')
+    parser.add_argument('--data_type',  default='CCLE', help='')
+    parser.add_argument('--data_split_id',  default=0, help='')
+    parser.add_argument('--batch_size',  default=64, help='')
+    parser.add_argument('--epochs',  default=1, help='')
+    parser.add_argument('--optimizer',  default='adam', help='')
+    parser.add_argument('--loss',  default='mean_squared_error', help='')
+    parser.add_argument('--learning_rate',  default=0.001, help='')
+    parser.add_argument('--model_name',  default='hidra', help='')
+    # parser.add_argument('--encoder_type',  default='gnn', help='')
+    args = parser.parse_args()
+
+
+
+    main(args)
     try:
         K.clear_session()
 

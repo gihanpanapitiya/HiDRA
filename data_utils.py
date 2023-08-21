@@ -22,14 +22,17 @@ candle_data_dict = {
 
 class Downloader:
 
-    def __init__(self, version):
-        self.version = version
-        if version == 'benchmark-data-pilot1':
-            self.ftp_dir = f'https://ftp.mcs.anl.gov/pub/candle/public/improve/benchmarks/single_drug_drp/{version}/csa_data/raw_data/'
-        elif version == 'benchmark-data-imp-2023':
-            self.ftp_dir = f'https://ftp.mcs.anl.gov/pub/candle/public/improve/benchmarks/single_drug_drp/{version}/csa_data/'
+    def __init__(self, args):
+        self.version = args.data_version
+        if self.version == 'benchmark-data-pilot1':
+            self.ftp_dir = f'https://ftp.mcs.anl.gov/pub/candle/public/improve/benchmarks/single_drug_drp/{self.version}/csa_data/raw_data/'
+        elif self.version == 'benchmark-data-imp-2023':
+            self.ftp_dir = f'https://ftp.mcs.anl.gov/pub/candle/public/improve/benchmarks/single_drug_drp/{self.version}/csa_data/'
 
     def download_candle_data(self, data_type="CCLE", split_id=0, data_dest='Data/'):
+        if not os.path.exists(data_dest):
+            os.makedirs(data_dest)
+            
         self.download_candle_split_data(data_type=data_type, split_id=split_id, data_dest=data_dest)
         self.download_candle_resp_data(data_dest=data_dest)
         self.download_candle_gexp_data(data_dest=data_dest)

@@ -8,19 +8,19 @@ import candle
 import sys
 from data_utils import Downloader, DataProcessor, add_smiles
 from sklearn.model_selection import train_test_split
-
+from omegaconf import OmegaConf
 
 
 def main(args):
 
-    dw = Downloader(args.data_version)
+    dw = Downloader(args)
     data_path= args.data_path
     metric=args.metric
     data_type=args.data_type
     split_id = args.data_split_id
     source_data_name= data_type
  
-    dw.download_candle_data(data_type="CCLE", split_id=split_id, data_dest=data_path)
+    dw.download_candle_data(data_type=data_type, split_id=split_id, data_dest=data_path)
     proc = DataProcessor(args.data_version)
 
 
@@ -132,14 +132,24 @@ def main(args):
 import argparse
 if __name__=="__main__":
 
+
+    # parser = argparse.ArgumentParser()
+    # parser.add_argument('--config', help="configuration file *.yml", type=str, required=False, default='config.yaml')
+    # args = parser.parse_args()
+
+    # if args.config:  # args priority is higher than yaml
+    #     args_ = OmegaConf.load(args.config)
+    #     OmegaConf.resolve(args_)
+    #     args=args_
+
     parser = argparse.ArgumentParser(prog='ProgramName', description='What the program does')
-    parser.add_argument('--metric',  default='ic50', help='')
+    parser.add_argument('--metric',  default='auc', help='')
     parser.add_argument('--run_id',  default=0, help='')
     # parser.add_argument('--epochs',  default=1, help='')
     parser.add_argument('--data_split_seed',  default=1, help='')
     parser.add_argument('--out_dir',  default='./Output', help='')
     parser.add_argument('--data_path',  default='./Data', help='')
-    parser.add_argument('--data_version',  default='benchmark-data-imp-2023', help='')
+    parser.add_argument('--data_version',  default='benchmark-data-pilot1', help='')
     parser.add_argument('--data_type',  default='CCLE', help='')
     parser.add_argument('--data_split_id',  default=0, help='')
     # parser.add_argument('--encoder_type',  default='gnn', help='')

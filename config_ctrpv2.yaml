@@ -1,0 +1,6 @@
+metric: auc
+epochs: 20
+out_dir: cmp_ctrpv2
+data_version: benchmark-data-pilot1
+data_type: CTRPv2
+batch_size: 32

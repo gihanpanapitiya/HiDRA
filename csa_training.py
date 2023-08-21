@@ -192,6 +192,7 @@ def get_drug_response_data(args):
     data_type=args.data_type
     split_id = args.data_split_id
     source_data_name= data_type
+    data_split_seed = int(args.data_split_seed)
 
     proc = DataProcessor(args.data_version)
 
@@ -207,13 +208,19 @@ def get_drug_response_data(args):
 
     smiles_df = proc.load_smiles_data(data_dir=data_path)
 
-    train_tmp = add_smiles(smiles_df, train_tmp, metric)
-    val_tmp = add_smiles(smiles_df, val_tmp, metric)
-    test_tmp = add_smiles(smiles_df, test_tmp, metric)
+    train = add_smiles(smiles_df, train_tmp, metric)
+    val = add_smiles(smiles_df, val_tmp, metric)
+    test = add_smiles(smiles_df, test_tmp, metric)
 
-    df_all = pd.concat([train_tmp, val_tmp, test_tmp], axis=0)
+    df_all = pd.concat([train, val, test], axis=0)
     df_all.reset_index(drop=True, inplace=True)
-    train, val, test = split_df(df_all, args.data_split_seed)
+
+    
+    if data_split_seed > -1:
+        print("randomly splitting the data")
+        train, val, test = split_df(df_all, data_split_seed)
+    else:
+        print("using predefined splits")
 
     return train, val, test
 
@@ -229,9 +236,11 @@ def run(gParameters):
     optimizer = gParameters.optimizer
     loss = gParameters.loss
     output_dir = gParameters.output_dir
+    metric = gParameters.metric
 
     output_dir = os.path.join(output_dir, str(args.run_id) )
-    os.makedirs(output_dir)
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
 
 
     y_col_name =  gParameters.metric
@@ -295,7 +304,7 @@ def run(gParameters):
     result = model.predict(test_input)
     result = [y[0] for y in result]
     auc_test['pred'] = result
-    auc_test['true'] = auc_test['ic50']
+    auc_test['true'] = auc_test[metric]
     auc_test.to_csv(output_dir + '/test_predictions.csv', index=False)
 
     return history
@@ -311,21 +320,21 @@ if __name__ == '__main__':
 
 
     parser = argparse.ArgumentParser(prog='ProgramName', description='What the program does')
-    parser.add_argument('--metric',  default='ic50', help='')
-    parser.add_argument('--run_id',  default=0, help='')
+    parser.add_argument('--metric',  type=str, default='ic50', help='')
+    parser.add_argument('--run_id',  type=int, default=0, help='')
     # parser.add_argument('--epochs',  default=1, help='')
-    parser.add_argument('--data_split_seed',  default=1, help='')
-    parser.add_argument('--output_dir',  default='./Output', help='')
-    parser.add_argument('--data_path',  default='./Data', help='')
-    parser.add_argument('--data_version',  default='benchmark-data-imp-2023', help='')
-    parser.add_argument('--data_type',  default='CCLE', help='')
-    parser.add_argument('--data_split_id',  default=0, help='')
-    parser.add_argument('--batch_size',  default=64, help='')
-    parser.add_argument('--epochs',  default=1, help='')
-    parser.add_argument('--optimizer',  default='adam', help='')
-    parser.add_argument('--loss',  default='mean_squared_error', help='')
-    parser.add_argument('--learning_rate',  default=0.001, help='')
-    parser.add_argument('--model_name',  default='hidra', help='')
+    parser.add_argument('--data_split_seed',  type=int, default=1, help='')
+    parser.add_argument('--output_dir',  type=str, default='./Output', help='')
+    parser.add_argument('--data_path',  type=str, default='./Data', help='')
+    parser.add_argument('--data_version',  type=str, default='benchmark-data-imp-2023', help='')
+    parser.add_argument('--data_type',  type=str, default='CCLE', help='')
+    parser.add_argument('--data_split_id',  type=int, default=0, help='')
+    parser.add_argument('--batch_size',  type=int, default=64, help='')
+    parser.add_argument('--epochs', type=int, default=1, help='')
+    parser.add_argument('--optimizer',  type=str, default='adam', help='')
+    parser.add_argument('--loss',  type=str, default='mean_squared_error', help='')
+    parser.add_argument('--learning_rate',  type=float, default=0.001, help='')
+    parser.add_argument('--model_name',  type=str, default='hidra', help='')
     # parser.add_argument('--encoder_type',  default='gnn', help='')
     args = parser.parse_args()
 
